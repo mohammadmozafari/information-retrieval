@@ -18,3 +18,14 @@ def excel_iter(path):
         yield (idx, content, url)
 
 
+class InvertedIndex():
+    def __init__(self):
+        self.index = {}
+    
+    def add_tokens(self, tokens, doc_id):
+        for token in tokens:
+            if token not in self.index:
+                self.index[token] = [doc_id]
+            else:
+                if self.index[token][-1] != doc_id:
+                    self.index[token].append(doc_id)
