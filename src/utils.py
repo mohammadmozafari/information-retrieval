@@ -1,4 +1,5 @@
 import re
+import itertools
 import pandas as pd
 
 class Tokenizer():
@@ -14,6 +15,7 @@ class Tokenizer():
     def normalize(self, s):
         s = re.sub(r'[.،؛:؟!«»\-=%\[\]\(\)/]+\ *', ' ', s)
         s = re.sub(r'[.,:;?\(\)\[\]"\'!@#$%^&*\-/]', ' ', s)
+        s = s.replace('\u200c', '')
         return s
 
 def excel_iter(path):
@@ -58,3 +60,30 @@ class InvertedIndex():
         for key, val in self.index.items():
             if len(val) >= freq_threshold:
                 yield key
+
+class Stemmer():
+
+    def __init__(self):
+        self.suffixes = ['ها', 'ات', 'تر', 'ترین', 'آسا' ,'اسا' , 'سان']
+
+    def removeSuffix(self, word):
+        clean_word = word
+        for suffix in self.suffixes:
+            if clean_word.endswith(suffix):
+                clean_word = clean_word[:-len(suffix)]
+                clean_word = self.removeSuffix(clean_word)
+                break
+        return clean_word
+
+    def stem(self, s):
+
+        # first rule: remove suffix from nouns
+        s = self.removeSuffix(s) 
+        return s
+
+
+if __name__ == '__main__':
+    
+    test_stem = Stemmer()
+    new = test_stem.stem('برقآساترین')
+    print(new)
