@@ -64,26 +64,191 @@ class InvertedIndex():
 class Stemmer():
 
     def __init__(self):
-        self.suffixes = ['ها', 'ات', 'تر', 'ترین', 'آسا' ,'اسا' , 'سان']
+        self.suffixes = ['ها' ,'ات' ,'تر' ,'ترین' ,'آسا' ,'اسا' ,'سان']
 
-    def removeSuffix(self, word):
+    def remove_suffix(self, word):
         clean_word = word
         for suffix in self.suffixes:
             if clean_word.endswith(suffix):
                 clean_word = clean_word[:-len(suffix)]
-                clean_word = self.removeSuffix(clean_word)
+                clean_word = self.remove_suffix(clean_word)
                 break
         return clean_word
 
+    def normalize_letters(self, word):
+        clean_word = word
+        x = r'ء'
+        y = r'ئ'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'ٲ|ٱ|إ|ﺍ|أ'
+        y = r'ا'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'ﺁ|آ'
+        y = r'آ'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'ﺐ|ﺏ|ﺑ'
+        y = r'ب'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'ﭖ|ﭗ|ﭙ|ﺒ|ﭘ'
+        y = r'پ'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'ﭡ|ٺ|ٹ|ﭞ|ٿ|ټ|ﺕ|ﺗ|ﺖ|ﺘ'
+        y = r'ت'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'ﺙ|ﺛ'
+        y = r'ث'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'ﺙ|ﺛ'
+        y = r'ث'
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﺝ|ڃ|ﺠ|ﺟ"
+        y = r"ج"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ڃ|ﭽ|ﭼ"
+        y = r"چ"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﺢ|ﺤ|څ|ځ|ﺣ"
+        y = r"ح"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﺥ|ﺦ|ﺨ|ﺧ"
+        y = r"خ"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ڏ|ډ|ﺪ|ﺩ"
+        y = r"د"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﺫ|ﺬ|ﻧ"
+        y = r"ذ"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ڙ|ڗ|ڒ|ڑ|ڕ|ﺭ|ﺮ"
+        y = r"ر"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﺰ|ﺯ"
+        y = r"ز"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﮊ"
+        y = r"ژ"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ݭ|ݜ|ﺱ|ﺲ|ښ|ﺴ|ﺳ"
+        y = r"س"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﺵ|ﺶ|ﺸ|ﺷ"
+        y = r"ش"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﺺ|ﺼ|ﺻ"
+        y = r"ص"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﺽ|ﺾ|ﺿ|ﻀ"
+        y = r"ض"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﻁ|ﻂ|ﻃ|ﻄ"
+        y = r"ط"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﻆ|ﻇ|ﻈ"
+        y = r"ظ"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ڠ|ﻉ|ﻊ|ﻋ"
+        y = r"ع"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﻎ|ۼ|ﻍ|ﻐ|ﻏ"
+        y = r"غ"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﻒ|ﻑ|ﻔ|ﻓ"
+        y = r"ف"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﻕ|ڤ|ﻖ|ﻗ"
+        y = r"ق"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ڭ|ﻚ|ﮎ|ﻜ|ﮏ|ګ|ﻛ|ﮑ|ﮐ|ڪ|ك"
+        y = r"ک"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﮚ|ﮒ|ﮓ|ﮕ|ﮔ"
+        y = r"گ"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﻝ|ﻞ|ﻠ|ڵ"
+        y = r"ل"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﻡ|ﻤ|ﻢ|ﻣ"
+        y = r"م"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ڼ|ﻦ|ﻥ|ﻨ"
+        y = r"ن"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ވ|ﯙ|ۈ|ۋ|ﺆ|ۊ|ۇ|ۏ|ۅ|ۉ|ﻭ|ﻮ|ؤ"
+        y = r"و"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﺔ|ﻬ|ھ|ﻩ|ﻫ|ﻪ|ۀ|ە|ة|ہ"
+        y = r"ه"
+        clean_word = re.sub(x, y, clean_word)
+        x = r"ﭛ|ﻯ|ۍ|ﻰ|ﻱ|ﻲ|ں|ﻳ|ﻴ|ﯼ|ې|ﯽ|ﯾ|ﯿ|ێ|ے|ى|ي"
+        y = r"ی"
+        clean_word = re.sub(x, y, clean_word)
+        x = r'¬'
+        y = r'‌'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'•|·|●|·|・|∙|｡|ⴰ'
+        y = r'.'
+        clean_word = re.sub(x, y, clean_word)
+        x = r',|٬|٫|‚|，'
+        y = r'،'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'ʕ'
+        y = r'؟'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'۰|٠'
+        y = r'0'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'۱|١'
+        y = r'1'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'۲|٢'
+        y = r'2'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'۳|٣'
+        y = r'3'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'۴|٤'
+        y = r'4'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'۵'
+        y = r'5'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'۶|٦'
+        y = r'6'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'۷|٧'
+        y = r'7'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'۸|٨'
+        y = r'8'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'۹|٩'
+        y = r'9'
+        clean_word = re.sub(x, y, clean_word)
+        x = r'ـ|ِ|ُ|َ|ٍ|ٌ|ً|'
+        y = r''
+        clean_word = re.sub(x, y, clean_word)
+        x = r'( )+'
+        y = r' '
+        clean_word = re.sub(x, y, clean_word)
+        x = r'(\n)+'
+        y = r'\n'
+        clean_word = re.sub(x, y, clean_word)
+        return clean_word
+
+
     def stem(self, s):
 
-        # first rule: remove suffix from nouns
-        s = self.removeSuffix(s) 
+        # Rule 1: Remove suffix from nouns
+        s = self.remove_suffix(s) 
+
+        # Rule 2: Normalize letters in words
+        s = self.normalize_letters(s)
+
         return s
 
 
 if __name__ == '__main__':
     
     test_stem = Stemmer()
-    new = test_stem.stem('برقآساترین')
+    new = test_stem.stem('آڪکﻋ')
     print(new)
