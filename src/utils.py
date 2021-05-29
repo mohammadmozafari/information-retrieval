@@ -1,3 +1,4 @@
+import re
 import pandas as pd
 
 class Tokenizer():
@@ -6,8 +7,14 @@ class Tokenizer():
         pass
 
     def tokenize(self, s):
-        tokens = s.split(' ')
+        normalized_s = self.normalize(s)
+        tokens = normalized_s.split()
         return tokens
+
+    def normalize(self, s):
+        s = re.sub(r'[.،؛:؟!«»\-=%\[\]\(\)/]+\ *', ' ', s)
+        s = re.sub(r'[.,:;?\(\)\[\]"\'!@#$%^&*\-/]', ' ', s)
+        return s
 
 def excel_iter(path):
     data = pd.read_excel('IR_Spring2021_ph12_7k.xlsx')
