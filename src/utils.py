@@ -65,6 +65,20 @@ class Stemmer():
 
     def __init__(self):
         self.suffixes = ['ها' ,'ات' ,'تر' ,'ترین' ,'آسا' ,'اسا' ,'سان']
+        self.verb_prefixes = ['می', 'ن', 'نمی', 'ب']
+        self.verb_suffixes = ['م', 'ی', 'د', 'یم', 'ید', 'ند']
+        self.bon_mazi = self.load_bon('./bon_mazi.fa')
+        self.bon_mozare = self.load_bon('./bon_mozare.fa')
+
+    def load_bon(self, file):
+        bons = set()
+        with open(file, encoding='utf-8') as f:
+            while True:
+                line = f.readline().strip()
+                if line == '':
+                    break
+                bons.add(line)
+        return bons
 
     def remove_suffix(self, word):
         clean_word = word
@@ -74,6 +88,14 @@ class Stemmer():
                 clean_word = self.remove_suffix(clean_word)
                 break
         return clean_word
+
+    def remove_fel_suffix(self, verb):
+        clean_verb = verb
+        for suffix in self.verb_suffixes:
+            if clean_verb.endswith(suffix):
+                clean_verb = clean_verb[:-len(suffix)]
+                break
+        return clean_verb
 
     def normalize_letters(self, word):
         clean_word = word
@@ -235,14 +257,34 @@ class Stemmer():
         clean_word = re.sub(x, y, clean_word)
         return clean_word
 
-
+    def normalize_if_verb(self, verb):
+        if (verb in self.bon_mazi) or (verb in self.bon_mozare):
+            return verb
+        for pre, suf in itertools.product(self.verb_prefixes, self.verb_suffixes):
+            if verb.startswith(pre):
+                temp = verb[len(pre):]
+                if (temp in self.bon_mazi) or (temp in self.bon_mozare):
+                    return temp
+            if verb.endswith(suf):
+                temp = verb[:-len(suf)]
+                if (temp in self.bon_mazi) or (temp in self.bon_mozare):
+                    return temp
+            if verb.startswith(pre) and verb.endswith(suf):
+                temp = verb[len(pre):-len(suf)]
+                if (temp in self.bon_mazi) or (temp in self.bon_mozare):
+                    return temp
+        return verb
+    
     def stem(self, s):
 
         # Rule 1: Remove suffix from nouns
-        s = self.remove_suffix(s) 
+        # s = self.remove_suffix(s) 
 
         # Rule 2: Normalize letters in words
-        s = self.normalize_letters(s)
+        # s = self.normalize_letters(s)
+
+        # Rule 3: Verbs are normalized
+        s = self.normalize_if_verb(s)
 
         return s
 
@@ -250,5 +292,5 @@ class Stemmer():
 if __name__ == '__main__':
     
     test_stem = Stemmer()
-    new = test_stem.stem('آڪکﻋ')
+    new = test_stem.stem('نمیروند')
     print(new)
