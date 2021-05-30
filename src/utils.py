@@ -69,6 +69,7 @@ class Stemmer():
         self.verb_suffixes = ['م', 'ی', 'د', 'یم', 'ید', 'ند']
         self.bon_mazi = self.load_bon('./bon_mazi.fa')
         self.bon_mozare = self.load_bon('./bon_mozare.fa')
+        self.mokassar_dic = self.load_mokassar('./Mokassar.fa')
 
     def load_bon(self, file):
         bons = set()
@@ -80,6 +81,17 @@ class Stemmer():
                 bons.add(line)
         return bons
 
+    def load_mokassar(self, file):
+        mokassar_dic = {}
+        with open(file, encoding='utf-8') as f:
+            while True:
+                line = f.readline().strip()
+                if line == '':
+                    break
+                mokassar, mofrad = line.split('\t')
+                mokassar_dic[mokassar] = mofrad
+        return mokassar_dic
+
     def remove_suffix(self, word):
         clean_word = word
         for suffix in self.suffixes:
@@ -88,14 +100,6 @@ class Stemmer():
                 clean_word = self.remove_suffix(clean_word)
                 break
         return clean_word
-
-    def remove_fel_suffix(self, verb):
-        clean_verb = verb
-        for suffix in self.verb_suffixes:
-            if clean_verb.endswith(suffix):
-                clean_verb = clean_verb[:-len(suffix)]
-                break
-        return clean_verb
 
     def normalize_letters(self, word):
         clean_word = word
@@ -274,7 +278,12 @@ class Stemmer():
                 if (temp in self.bon_mazi) or (temp in self.bon_mozare):
                     return temp
         return verb
-    
+
+    def plural_to_single(self, word):
+        if word in self.mokassar_dic:
+            return self.mokassar_dic[word]
+        return word
+
     def stem(self, s):
 
         # Rule 1: Remove suffix from nouns
@@ -284,7 +293,10 @@ class Stemmer():
         # s = self.normalize_letters(s)
 
         # Rule 3: Verbs are normalized
-        s = self.normalize_if_verb(s)
+        # s = self.normalize_if_verb(s)
+
+        # Rule 4: Mokassar plurals
+        s = self.plural_to_single(s)
 
         return s
 
@@ -292,5 +304,5 @@ class Stemmer():
 if __name__ == '__main__':
     
     test_stem = Stemmer()
-    new = test_stem.stem('نمیروند')
+    new = test_stem.stem('ادله')
     print(new)
