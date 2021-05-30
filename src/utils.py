@@ -67,6 +67,7 @@ class Stemmer():
         self.suffixes = ['ها' ,'ات' ,'تر' ,'ترین' ,'آسا' ,'اسا' ,'سان']
         self.verb_prefixes = ['می', 'ن', 'نمی', 'ب']
         self.verb_suffixes = ['م', 'ی', 'د', 'یم', 'ید', 'ند']
+        self.erabs = ['ً', 'ٌ', 'ٍ', 'َ', 'ُ', 'ِ', 'ّ']
         self.bon_mazi = self.load_bon('./bon_mazi.fa')
         self.bon_mozare = self.load_bon('./bon_mozare.fa')
         self.mokassar_dic = self.load_mokassar('./Mokassar.fa')
@@ -284,6 +285,12 @@ class Stemmer():
             return self.mokassar_dic[word]
         return word
 
+    def remove_erabs(self, word):
+        clean_word = word
+        for erab in self.erabs:
+            clean_word = clean_word.replace(erab, '')
+        return clean_word
+
     def stem(self, s):
 
         # Rule 1: Remove suffix from nouns
@@ -296,7 +303,10 @@ class Stemmer():
         # s = self.normalize_if_verb(s)
 
         # Rule 4: Mokassar plurals
-        s = self.plural_to_single(s)
+        # s = self.plural_to_single(s)
+
+        # Rule 5: Remove erabs
+        # s = self.remove_erabs(s)
 
         return s
 
@@ -304,5 +314,5 @@ class Stemmer():
 if __name__ == '__main__':
     
     test_stem = Stemmer()
-    new = test_stem.stem('ادله')
+    new = test_stem.stem('محمّد')
     print(new)
