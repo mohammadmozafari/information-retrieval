@@ -5,6 +5,7 @@ import pandas as pd
 def main():
 
     index = None
+    stemmer = Stemmer()
     while True:
         print('------------------------------')
         print('1 - Create index')
@@ -14,7 +15,7 @@ def main():
         choice = int(input())
         print()
         if choice == 1:
-            index = create_index('data.xlsx', 'index.txt')
+            index = create_index('data.xlsx', 'index.txt'. stemmer)
         elif choice == 2:
             index = load_index('index.txt')
         elif choice == 3:
@@ -22,6 +23,7 @@ def main():
                 print('You have to load the index first.')
                 continue
             query = input('Enter search query: ')
+            query = stemmer.stem(query)
             results = search(index, query)
             show_search_results(results, 'data.xlsx')
         elif choice == 4:
@@ -29,10 +31,9 @@ def main():
         else:
             print('Invalid choice. Try again.')
 
-def create_index(data_path, save_path):
+def create_index(data_path, save_path, stemmer):
     inverted_index = InvertedIndex()
     tokenizer = Tokenizer()
-    stemmer = Stemmer()
 
     # Construct the inverted index
     for idx, content, _ in excel_iter(data_path):
@@ -58,22 +59,40 @@ def load_index(index_path):
 def search(index, query):
     words = query.split()
     if len(words) == 1:
-        return index.get_postings_list(words[0])
+        lst = index.get_postings_list(words[0])
+        if lst is None:
+            return None
+        return [(x, None) for x in index.get_postings_list(words[0])]
+    
+    all_lists = []
+    for word in words:
+        pl = index.get_postings_list(word)
+        if pl is not None:
+            all_lists.append(pl)
+    pointers = [0 for _ in range(len(all_lists))]
     results = []
-    pointers = [0 for _ in range(len(words))]
+    if len(pointers) == 0:
+        return None
     while True:
-        doc_ids = [index[words[i]][pointer] if pointer < len(index[words[i]]) else -1 for i, pointer in enumerate(pointers)]
+        doc_ids = [all_lists[i][pointer] for (i, pointer) in enumerate(pointers)]
         doc_id, args = args_min(doc_ids)
         results.append((doc_id, len(args)))
         for arg in args:
             pointers[arg] += 1
+        args = sorted(args, reverse=True)
+        for arg in args:
+            if pointers[arg] >= len(all_lists[arg]):
+                pointers.pop(arg)
+                all_lists.pop(arg)
+        if len(pointers) == 0:
+            break
+    results = sorted(results, reverse=True, key=lambda x: x[1])
+    return results
 
 def args_min(lst):
     min_value = -1
     args = []
     for i, value in enumerate(lst):
-        if value == -1:
-            continue
         if (min_value == -1) or (value < min_value):
             min_value = value
             args = [i]
@@ -87,9 +106,11 @@ def show_search_results(doc_list, path):
         print('No results was found.')
         return
     data = pd.read_excel(path)
-    for i, doc_id in enumerate(doc_list):
+    for i, (doc_id, count) in enumerate(doc_list):
         print('{}.'.format(i + 1))
         print('\tDocument Number: {}'.format(doc_id))
+        if count is not None:
+            print('\tDocument contains {} words of query.'.format(count))
         print('\t{}'.format(data.loc[data['id'] == doc_id].iloc[0]['url']))
 
 class Tokenizer():
@@ -422,5 +443,8 @@ class Stemmer():
 
 if __name__ == '__main__':
     
+    # a = [1, 6, 3, 4, 5]
+    # print(sorted(a, reverse=True))
+    # print(a)
     # print(args_min([-1, 3, 2, 2, 3, -1, 3, -1]))
     main()
