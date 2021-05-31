@@ -61,10 +61,14 @@ class InvertedIndex():
             if len(val) >= freq_threshold:
                 yield key
 
+# Ideas: 
+#   1 - When removing suffixes or prefixes check that the remainder has lenght more than 1
+#   2 - When removing suffixes and prefixes from verbs check if the word is really a verb
+
 class Stemmer():
 
     def __init__(self):
-        self.suffixes = ['ها' ,'ات' ,'تر' ,'ترین' ,'آسا' ,'اسا' ,'سان']
+        self.suffixes = ['ها' ,'ات' ,'تر' ,'ترین']
         self.verb_prefixes = ['می', 'ن', 'نمی', 'ب']
         self.verb_suffixes = ['م', 'ی', 'د', 'یم', 'ید', 'ند']
         self.erabs = ['ً', 'ٌ', 'ٍ', 'َ', 'ُ', 'ِ', 'ّ']
@@ -97,6 +101,8 @@ class Stemmer():
         clean_word = word
         for suffix in self.suffixes:
             if clean_word.endswith(suffix):
+                if len(clean_word[:-len(suffix)]) < 2:
+                    continue
                 clean_word = clean_word[:-len(suffix)]
                 clean_word = self.remove_suffix(clean_word)
                 break
@@ -268,15 +274,15 @@ class Stemmer():
         for pre, suf in itertools.product(self.verb_prefixes, self.verb_suffixes):
             if verb.startswith(pre):
                 temp = verb[len(pre):]
-                if (temp in self.bon_mazi) or (temp in self.bon_mozare):
+                if (temp in self.bon_mazi) and (len(temp) > 1):
                     return temp
             if verb.endswith(suf):
                 temp = verb[:-len(suf)]
-                if (temp in self.bon_mazi) or (temp in self.bon_mozare):
+                if (temp in self.bon_mazi) and (len(temp) > 1):
                     return temp
             if verb.startswith(pre) and verb.endswith(suf):
                 temp = verb[len(pre):-len(suf)]
-                if (temp in self.bon_mazi) or (temp in self.bon_mozare):
+                if ((temp in self.bon_mazi) or (temp in self.bon_mozare)) and (len(temp) > 1):
                     return temp
         return verb
 
@@ -294,19 +300,19 @@ class Stemmer():
     def stem(self, s):
 
         # Rule 1: Remove suffix from nouns
-        # s = self.remove_suffix(s) 
+        s = self.remove_suffix(s) 
 
         # Rule 2: Normalize letters in words
-        # s = self.normalize_letters(s)
+        s = self.normalize_letters(s)
 
         # Rule 3: Verbs are normalized
-        # s = self.normalize_if_verb(s)
+        s = self.normalize_if_verb(s)
 
         # Rule 4: Mokassar plurals
-        # s = self.plural_to_single(s)
+        s = self.plural_to_single(s)
 
         # Rule 5: Remove erabs
-        # s = self.remove_erabs(s)
+        s = self.remove_erabs(s)
 
         return s
 
@@ -314,5 +320,5 @@ class Stemmer():
 if __name__ == '__main__':
     
     test_stem = Stemmer()
-    new = test_stem.stem('محمّد')
+    new = test_stem.stem('بمیمیرم')
     print(new)
