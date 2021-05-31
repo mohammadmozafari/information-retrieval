@@ -15,7 +15,7 @@ def main():
         choice = int(input())
         print()
         if choice == 1:
-            index = create_index('data.xlsx', 'index.txt'. stemmer)
+            index = create_index('data.xlsx', 'index.txt', stemmer)
         elif choice == 2:
             index = load_index('index.txt')
         elif choice == 3:
@@ -454,9 +454,5 @@ def test_tokenizer_and_stemmer():
 
 if __name__ == '__main__':
     
-    # a = [1, 6, 3, 4, 5]
-    # print(sorted(a, reverse=True))
-    # print(a)
-    # print(args_min([-1, 3, 2, 2, 3, -1, 3, -1]))
-    # main()
-    test_tokenizer_and_stemmer()
+    # test_tokenizer_and_stemmer()
+    main()
