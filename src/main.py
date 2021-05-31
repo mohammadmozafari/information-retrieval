@@ -73,7 +73,7 @@ class Tokenizer():
         return s
 
 def excel_iter(path):
-    data = pd.read_excel('IR_Spring2021_ph12_7k.xlsx')
+    data = pd.read_excel(path)
     for _, row in data.iterrows():
         idx = row['id'] 
         content = row['content']
