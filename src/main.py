@@ -90,7 +90,7 @@ def show_search_results(doc_list, path):
     for i, doc_id in enumerate(doc_list):
         print('{}.'.format(i + 1))
         print('\tDocument Number: {}'.format(doc_id))
-        print('\t{}'.format(data.loc[data['id'] == int(doc_id)].iloc[0]['url']))
+        print('\t{}'.format(data.loc[data['id'] == doc_id].iloc[0]['url']))
 
 class Tokenizer():
 
@@ -160,7 +160,7 @@ class InvertedIndex():
                 line = f.readline().strip()
                 if line == '': break
                 parts = line.split('\t')
-                self.index[parts[0]] = parts[1:]
+                self.index[parts[0]] = [int(x) for x in parts[1:]]
 
     def get_postings_list(self, word):
         return self.index[word] if word in self.index else None
