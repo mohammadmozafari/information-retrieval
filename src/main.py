@@ -402,7 +402,7 @@ class Stemmer():
                     return temp
             if verb.endswith(suf):
                 temp = verb[:-len(suf)]
-                if (temp in self.bon_mazi) and (len(temp) > 1):
+                if ((temp in self.bon_mazi) or (temp in self.bon_mozare)) and (len(temp) > 1):
                     return temp
             if verb.startswith(pre) and verb.endswith(suf):
                 temp = verb[len(pre):-len(suf)]
@@ -423,22 +423,33 @@ class Stemmer():
 
     def stem(self, s):
 
-        # Rule 1: Remove suffix from nouns
+        # Rule 1: Remove erabs
+        s = self.remove_erabs(s)
+        
+        # Rule 2: Normalize letters in words
+        s = self.normalize_letters(s)
+        
+        # Rule 3: Mokassar plurals
+        s = self.plural_to_single(s)
+
+        # Rule 4: Verbs are normalized
+        s = self.normalize_if_verb(s)
+
+        # Rule 5: Remove suffix from nouns
         s = self.remove_suffix(s) 
 
-        # Rule 2: Normalize letters in words
-        # s = self.normalize_letters(s)
-
-        # Rule 3: Verbs are normalized
-        # s = self.normalize_if_verb(s)
-
-        # Rule 4: Mokassar plurals
-        # s = self.plural_to_single(s)
-
-        # Rule 5: Remove erabs
-        s = self.remove_erabs(s)
-
         return s
+
+def test_tokenizer_and_stemmer():
+    tk = Tokenizer()
+    stemmer = Stemmer()
+    data = pd.read_excel('data.xlsx')
+    text = data.iloc[0]['content']
+    tokens = tk.tokenize(text)
+    for token in tokens:
+        stemmed = stemmer.stem(token)
+        if stemmed != token:
+            print(token, stemmer.stem(token))
 
 
 if __name__ == '__main__':
@@ -447,4 +458,5 @@ if __name__ == '__main__':
     # print(sorted(a, reverse=True))
     # print(a)
     # print(args_min([-1, 3, 2, 2, 3, -1, 3, -1]))
-    main()
+    # main()
+    test_tokenizer_and_stemmer()
