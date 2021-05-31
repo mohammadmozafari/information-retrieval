@@ -2,9 +2,6 @@ import re
 import itertools
 import pandas as pd
 
-def search():
-    pass
-
 def main():
 
     index = None
@@ -17,15 +14,16 @@ def main():
         choice = int(input())
         print()
         if choice == 1:
-            dataset_path = input('Enter address of dataset: ')
-            index = create_index(dataset_path, 'index.txt')
+            index = create_index('data.xlsx', 'index.txt')
         elif choice == 2:
-            load_index('index.txt')
+            index = load_index('index.txt')
         elif choice == 3:
             if index is None:
-                print('You have to load an index first.')
+                print('You have to load the index first.')
                 continue
-            search()
+            query = input('Enter search query: ')
+            results = search(index, query)
+            show_search_results(results, 'data.xlsx')
         elif choice == 4:
             break
         else:
@@ -55,6 +53,44 @@ def load_index(index_path):
     inverted_index = InvertedIndex()
     inverted_index.load_from_file(index_path)
     return inverted_index
+
+
+def search(index, query):
+    words = query.split()
+    if len(words) == 1:
+        return index.get_postings_list(words[0])
+    results = []
+    pointers = [0 for _ in range(len(words))]
+    while True:
+        doc_ids = [index[words[i]][pointer] if pointer < len(index[words[i]]) else -1 for i, pointer in enumerate(pointers)]
+        doc_id, args = args_min(doc_ids)
+        results.append((doc_id, len(args)))
+        for arg in args:
+            pointers[arg] += 1
+
+def args_min(lst):
+    min_value = -1
+    args = []
+    for i, value in enumerate(lst):
+        if value == -1:
+            continue
+        if (min_value == -1) or (value < min_value):
+            min_value = value
+            args = [i]
+        elif value == min_value:
+            args.append(i)
+    return min_value, args
+
+def show_search_results(doc_list, path):
+    print()
+    if doc_list is None:
+        print('No results was found.')
+        return
+    data = pd.read_excel(path)
+    for i, doc_id in enumerate(doc_list):
+        print('{}.'.format(i + 1))
+        print('\tDocument Number: {}'.format(doc_id))
+        print('\t{}'.format(data.loc[data['id'] == int(doc_id)].iloc[0]['url']))
 
 class Tokenizer():
 
@@ -125,6 +161,9 @@ class InvertedIndex():
                 if line == '': break
                 parts = line.split('\t')
                 self.index[parts[0]] = parts[1:]
+
+    def get_postings_list(self, word):
+        return self.index[word] if word in self.index else None
 
 # Ideas: 
 #   1 - When removing suffixes or prefixes check that the remainder has lenght more than 1
@@ -382,4 +421,6 @@ class Stemmer():
 
 
 if __name__ == '__main__':
+    
+    # print(args_min([-1, 3, 2, 2, 3, -1, 3, -1]))
     main()
