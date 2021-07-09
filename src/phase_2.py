@@ -1,5 +1,7 @@
 import re
 import math
+import time
+import heapq
 import itertools
 import pandas as pd
 
@@ -20,6 +22,10 @@ def main():
             index = create_index('data.xlsx', 'index.txt', stemmer)
         elif choice == 2:
             index = load_index('index.txt')
+            for k, v in index.index.items():
+                if len(v) > 900:
+                    print(k, len(v))
+
         elif choice == 3:
             if index is None:
                 print('You have to load the index first.')
@@ -27,7 +33,7 @@ def main():
             query = input('Enter search query: ')
             query = stemmer.stem(query)
             results = search(index, query)
-            show_top_k_results(results, 'data.xlsx')
+            show_top_k_results(results, 'data.xlsx', sort=True, k=10)
         elif choice == 4:
             break
         else:
@@ -93,25 +99,36 @@ def compute_query_vector(index, query):
     for word in words:
         if word in vector:
             continue
-        print(index.num_docs)
-        print(len(index.index[word]))
         idf = math.log10(index.num_docs / len(index.index[word]))
         tf = 1 + math.log10(words.count(word))
         vector[word] = tf * idf
     return vector
 
-def show_top_k_results(doc_list, path):
+def show_top_k_results(results, path, sort=True, k=10):
     print()
-    if doc_list is None:
+    if results is None:
         print('No results was found.')
         return
+    doc_list = []
+    if sort:
+        tick = time.time()
+        doc_list = sorted(results.items(), key=lambda x: x[1], reverse=True)[:k]
+        tock = time.time()
+    else:
+        tick = time.time()
+        temp = [(-1 * item[1], item[0]) for item in results.items()]
+        heapq.heapify(temp)
+        for _ in range(k):
+            r = heapq.heappop(temp)
+            doc_list.append((r[1], -1 * r[0]))
+        tock = time.time()
     data = pd.read_excel(path)
-    for i, (doc_id, count) in enumerate(doc_list):
+    for i, (doc_id, score) in enumerate(doc_list):
         print('{}.'.format(i + 1))
         print('\tDocument Number: {}'.format(doc_id))
-        if count is not None:
-            print('\tDocument contains {} words of query.'.format(count))
+        print('\tDocument Score: {}'.format(score))
         print('\t{}'.format(data.loc[data['id'] == doc_id].iloc[0]['url']))
+    print('\nSorting the results completed in {} seconds'.format(tock-tick))
 
 
 def excel_iter(path):
