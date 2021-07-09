@@ -8,6 +8,12 @@ import pandas as pd
 
 def main():
 
+    index_path = 'index_2.txt'
+    champions_on = True
+    heap_on = True
+    k = 10
+    r = 5
+
     index = None
     stemmer = Stemmer()
     while True:
@@ -19,29 +25,28 @@ def main():
         choice = int(input())
         print()
         if choice == 1:
-            index = create_index('data.xlsx', 'index.txt', stemmer)
+            index = create_index('data.xlsx', r, index_path, stemmer)
         elif choice == 2:
-            index = load_index('index.txt')
-            for k, v in index.index.items():
-                if len(v) > 900:
-                    print(k, len(v))
-
+            index = load_index(index_path)
+            # for k, v in index.index.items():
+            #     if len(v) > 900:
+            #         print(k, len(v))
         elif choice == 3:
             if index is None:
                 print('You have to load the index first.')
                 continue
             query = input('Enter search query: ')
             query = stemmer.stem(query)
-            results = search(index, query)
-            show_top_k_results(results, 'data.xlsx', sort=True, k=10)
+            results = search(index, query, k=k, cham=champions_on)
+            show_top_k_results(results, 'data.xlsx', sort=(not heap_on), k=k)
         elif choice == 4:
             break
         else:
             print('Invalid choice. Try again.')
 
 
-def create_index(data_path, save_path, stemmer):
-    inverted_index = InvertedIndex()
+def create_index(data_path, r, save_path, stemmer):
+    inverted_index = InvertedIndex(r=r)
     tokenizer = Tokenizer()
 
     # Construct the inverted index
@@ -67,15 +72,27 @@ def load_index(index_path):
     return inverted_index
 
 
-def search(index, query):
+def search(index, query, k=10, champ=True):
     """
     This function takes a query, finds its vector representation and
     calculates its cosine similarity with documents and returns document scores.
     """
+    use_champ = True
+    if champ == False:
+        use_champ = False
+    else:
+        num = champions_docs_num(index, query)
+        if num < k:
+            use_champ = False
+        else:
+            use_champ = True
     results = {}
     query_vector = compute_query_vector(index, query)
     for word, weight in query_vector.items():
-        p = index.get_postings_list(word)
+        if use_champ:
+            p = index.get_champions_list(word)
+        else:
+            p = index.get_postings_list(word)
         if p is None:
             continue
         idf = math.log10(index.num_docs / len(index.index[word]))
@@ -103,6 +120,15 @@ def compute_query_vector(index, query):
         tf = 1 + math.log10(words.count(word))
         vector[word] = tf * idf
     return vector
+
+def champions_docs_num(index, query):
+    docs = set()
+    words = query.split()
+    for word in words:
+        lst = index.get_champions_list(word)
+        for item in lst:
+            docs.add(item[0])
+    return len(docs)
 
 def show_top_k_results(results, path, sort=True, k=10):
     print()
@@ -148,10 +174,12 @@ class InvertedIndex():
     that is stored in a python dictionary.
     """
 
-    def __init__(self):
+    def __init__(self, r=10):
         self.index = {}
+        self.champions_list = {}
         self.doc_lengths = {}
         self.num_docs = 0
+        self.r = r
 
     def add_tokens(self, tokens, doc_id):
         for token in tokens:
@@ -162,6 +190,10 @@ class InvertedIndex():
                     self.index[token].append((doc_id, 1))
                 else:
                     self.index[token][-1] = (doc_id, self.index[token][-1][1] + 1)
+    
+    def create_champions_list(self):
+        for k, v in self.index.items():
+            self.champions_list[k] = sorted(v, key=lambda x: x[1], reverse=True)[:self.r]
 
     def remove_stop_words(self, freq_threshold=1000):
         stop_words = list(self.stop_words(freq_threshold))
@@ -175,6 +207,7 @@ class InvertedIndex():
                 yield key
 
     def save_in_file(self, path):
+        self.create_champions_list()
         with open(path, encoding='utf-8', mode='w') as f:
             f.write('{}\n'.format(self.num_docs))
             for doc, length in self.doc_lengths.items():
@@ -183,6 +216,9 @@ class InvertedIndex():
                 f.write('{}'.format(key))
                 for posting in postings:
                     f.write('\t{}\t{}'.format(posting[0], posting[1]))
+                f.write('\n')
+                for posting in self.champions_list[key]:
+                    f.write('{}\t{}\t'.format(posting[0], posting[1]))
                 f.write('\n')
 
     def load_from_file(self, path):
@@ -199,9 +235,18 @@ class InvertedIndex():
                     break
                 parts = line.split('\t')
                 self.index[parts[0]] = [(int(parts[i]), int(parts[i+1])) for i in range(1, len(parts) - 1, 2)]
+                line = f.readline().strip()
+                cparts = line.split('\t')
+                self.champions_list[parts[0]] = [(int(cparts[i]), int(cparts[i+1])) for i in range(0, len(cparts) - 1, 2)]
+
+        # print(self.index['سلام'])
+        # print(self.champions_list['سلام'])
 
     def get_postings_list(self, word):
         return self.index[word] if word in self.index else None
+
+    def get_champions_list(self, word):
+        return self.champions_list[word] if word in self.champions_list else None
 
 
 # -------------------------------------------------------------------------------------------------------------------------------
