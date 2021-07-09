@@ -9,9 +9,9 @@ import pandas as pd
 def main():
 
     index_path = 'index_2.txt'
-    champions_on = True
+    champions_on = False
     heap_on = True
-    k = 10
+    k = 15
     r = 5
 
     index = None
@@ -37,9 +37,10 @@ def main():
                 continue
             query = input('Enter search query: ')
             query = stemmer.stem(query)
-            results = search(index, query, k=k, cham=champions_on)
+            results = search(index, query, k=k, champ=champions_on)
             show_top_k_results(results, 'data.xlsx', sort=(not heap_on), k=k)
         elif choice == 4:
+            print(index.get_df('کتاب'))
             break
         else:
             print('Invalid choice. Try again.')
@@ -95,7 +96,7 @@ def search(index, query, k=10, champ=True):
             p = index.get_postings_list(word)
         if p is None:
             continue
-        idf = math.log10(index.num_docs / len(index.index[word]))
+        idf = math.log10(index.num_docs / index.get_df(word))
         for doc, f in p:
             tf = 1 + math.log10(f)
             score = tf * idf * weight
@@ -114,9 +115,9 @@ def compute_query_vector(index, query):
     words = query.split()
     vector = {}
     for word in words:
-        if word in vector:
+        if (word in vector) or (word not in index.index):
             continue
-        idf = math.log10(index.num_docs / len(index.index[word]))
+        idf = math.log10(index.num_docs / index.get_df(word))
         tf = 1 + math.log10(words.count(word))
         vector[word] = tf * idf
     return vector
@@ -126,6 +127,8 @@ def champions_docs_num(index, query):
     words = query.split()
     for word in words:
         lst = index.get_champions_list(word)
+        if lst is None:
+            continue
         for item in lst:
             docs.add(item[0])
     return len(docs)
@@ -239,14 +242,17 @@ class InvertedIndex():
                 cparts = line.split('\t')
                 self.champions_list[parts[0]] = [(int(cparts[i]), int(cparts[i+1])) for i in range(0, len(cparts) - 1, 2)]
 
-        # print(self.index['سلام'])
-        # print(self.champions_list['سلام'])
+        # print(self.index['ناکرده'])
+        # print(self.champions_list['ناکرده'])
 
     def get_postings_list(self, word):
         return self.index[word] if word in self.index else None
 
     def get_champions_list(self, word):
         return self.champions_list[word] if word in self.champions_list else None
+
+    def get_df(self, word):
+        return len(self.index[word]) if word in self.index else 0
 
 
 # -------------------------------------------------------------------------------------------------------------------------------
