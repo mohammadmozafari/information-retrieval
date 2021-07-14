@@ -12,15 +12,18 @@ def main():
 
     index_path = 'index_3.pkl'
     clusters_path = 'clusters.pkl'
+    centroids_path = 'centroids.pkl'
     data_file = 'ph3_concat.xlsx'
     champions_on = False
-    heap_on = True
+    heap_on = False
     k = 15
     r = 5
-
+    b = 2
     index = None
     clusters = None
+    centroids = None
     stemmer = Stemmer()
+
     while True:
         print('------------------------------')
         print('1 - Create index')
@@ -41,15 +44,15 @@ def main():
                 continue
             query = input('Enter search query: ')
             query = stemmer.stem(query)
-            results = search(index, query, k=k, champ=champions_on)
-            show_top_k_results(results, 'data.xlsx', sort=(not heap_on), k=k)
+            results = search(index, query, k=k, b=b, champ=champions_on, clusters=clusters, centroids=centroids)
+            show_top_k_results(results, 'ph3_concat.xlsx', sort=(not heap_on), k=k)
         elif choice == 4:
-            k = int(input('How many clusters (k): '))
-            km = KMeans(k, 1000)
-            clusters = km.cluster(index, data_file)
+            clusters_num = int(input('How many clusters: '))
+            km = KMeans(clusters_num, 15)
+            clusters, centroids = km.cluster(index, data_file)
         elif choice == 5:
             clusters = load(clusters_path)
-            print(len(clusters))
+            centroids = load(centroids_path)
         elif choice == 6:
             print(index.get_df('کتاب'))
             break
@@ -74,7 +77,7 @@ def create_index(data_file, r, save_path, stemmer):
             print('{} docs processed.'.format(idx + 1))
 
     # Eliminate the stop words
-    inverted_index.remove_stop_words(freq_threshold=1000)
+    inverted_index.remove_stop_words(freq_threshold=10000)
     inverted_index.save_in_file(save_path)
 
     return inverted_index
@@ -85,7 +88,7 @@ def load(path):
         obj = pickle.load(f)
     return obj
 
-def search(index, query, k=10, champ=True):
+def search(index, query, k=10, b=1, champ=True, clusters=None, centroids=None):
     """
     This function takes a query, finds its vector representation and
     calculates its cosine similarity with documents and returns document scores.
@@ -101,6 +104,11 @@ def search(index, query, k=10, champ=True):
             use_champ = True
     results = {}
     query_vector = compute_tfidf_vector(index, query)
+    if clusters is None or centroids is None:
+        important_clusters = None
+    else:
+        important_clusters = find_b_nearest_clusters(
+            b, query_vector, centroids)
     for word, weight in query_vector.items():
         if use_champ:
             p = index.get_champions_list(word)
@@ -110,6 +118,8 @@ def search(index, query, k=10, champ=True):
             continue
         idf = math.log10(index.num_docs / index.get_df(word))
         for doc, f in p:
+            if (important_clusters is not None) and (clusters[doc] not in important_clusters):
+                continue
             tf = 1 + math.log10(f)
             score = tf * idf * weight
             if doc in results:
@@ -119,6 +129,16 @@ def search(index, query, k=10, champ=True):
     for result in results.keys():
         results[result] /= index.doc_lengths[result]
     return results
+
+def find_b_nearest_clusters(b, query_vec, centroids):
+    dists = []
+    for centroid in centroids:
+        dist = 0
+        for term, score in query_vec.items():
+            dist += score * centroid.get(term, 0)
+        dists.append(dist)
+    s = sorted([(i, x) for i, x in enumerate(dists)], key=lambda x: x[1])
+    return [x for x, y in s[:b]]
 
 def calculate_tfidf(tf, df, n):
     idf = math.log10(n / df)
@@ -181,6 +201,7 @@ def show_top_k_results(results, path, sort=True, k=10):
         print('{}.'.format(i + 1))
         print('\tDocument Number: {}'.format(doc_id))
         print('\tDocument Score: {}'.format(score))
+        print('\tDocument Topic: {}'.format(data.loc[data['id'] == doc_id].iloc[0]['topic']))
         print('\t{}'.format(data.loc[data['id'] == doc_id].iloc[0]['url']))
     print('\nSorting the results completed in {} seconds'.format(tock-tick))
 
@@ -201,6 +222,18 @@ def arg_min(lst):
             min_value = value
             arg = i
     return arg
+
+
+def args_min(lst):
+    min_value = -1
+    args = []
+    for i, value in enumerate(lst):
+        if (min_value == -1) or (value < min_value):
+            min_value = value
+            args = [i]
+        elif value == min_value:
+            args.append(i)
+    return min_value, args
 
 # -----------------------------------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------- Clusterings -----------------------------------------------------------
@@ -226,8 +259,8 @@ class KMeans():
         self.centroids = centroids
         self.clusters = clusters
         print('RSS: {}'.format(self.compute_rss(index)))
-        self.save_clusters('clusters.pkl')
-        return clusters
+        self.save_clusters('clusters.pkl', 'centroids.pkl')
+        return clusters, centroids
 
     def get_initial_centroids(self, index, path):
         centroids = []
@@ -251,11 +284,16 @@ class KMeans():
 
     def compute_centroids(self, index, clusters):
         centroids = [{} for _ in range(self.k)]
+        centroids_counts = [0 for _ in range(self.k)]
         for term, plist in index.index.items():
             for docid, tf in plist:
                 c = clusters[docid]
+                centroids_counts[c] += 1
                 centroids[c][term] = centroids[c].get(
-                    term, 0) + calculate_tfidf(tf, index.get_df(term), index.num_docs) / index.num_docs
+                    term, 0) + calculate_tfidf(tf, index.get_df(term), index.num_docs)
+        for i, centroid in enumerate(centroids):
+            for term in centroid.keys():
+                centroid[term] /= centroids_counts[i]
         return centroids
 
     def compute_rss(self, index):
@@ -265,9 +303,11 @@ class KMeans():
                rss += (self.centroids[self.clusters[docid]].get(term, 0) - calculate_tfidf(tf, index.get_df(term), index.num_docs)) ** 2 
         return rss
 
-    def save_clusters(self, path):
-        with open(path, 'wb') as f:
+    def save_clusters(self, path1, path2):
+        with open(path1, 'wb') as f:
             pickle.dump(self.clusters, f, pickle.HIGHEST_PROTOCOL)
+        with open(path2, 'wb') as f:
+            pickle.dump(self.centroids, f, pickle.HIGHEST_PROTOCOL)
 
 # --------------------------------------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------- Inverted Index -----------------------------------------------------------
@@ -567,7 +607,7 @@ class Stemmer():
         s = self.remove_erabs(s)
 
         # Rule 2: Normalize letters in words
-        # s = self.normalize_letters(s)
+        s = self.normalize_letters(s)
 
         # Rule 3: Mokassar plurals
         s = self.plural_to_single(s)
@@ -601,4 +641,5 @@ class Tokenizer():
 
 if __name__ == '__main__':
     # test_tokenizer_and_stemmer()
+    
     main()

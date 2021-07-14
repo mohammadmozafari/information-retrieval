@@ -9,9 +9,9 @@ import pandas as pd
 def main():
 
     index_path = 'index_2.txt'
-    champions_on = False
+    champions_on = True
     heap_on = True
-    k = 15
+    k = 10
     r = 5
 
     index = None
@@ -28,9 +28,6 @@ def main():
             index = create_index('data.xlsx', r, index_path, stemmer)
         elif choice == 2:
             index = load_index(index_path)
-            # for k, v in index.index.items():
-            #     if len(v) > 900:
-            #         print(k, len(v))
         elif choice == 3:
             if index is None:
                 print('You have to load the index first.')
